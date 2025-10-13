@@ -1,0 +1,25 @@
+max_time_since_update = "1w"
+notification_interval = 01:00:00
+nixos_version_timeout = 30
+github_api_timeout = 30
+
+[hosts.localhost]
+argv = ["nixos-version", "--revision"]
+
+[hosts.server]
+argv = ["ssh", "server", "--", "nixos-version", "--revision"]
+
+[hosts.testing]
+argv = [
+    "ssh",
+    "testing",
+    "--",
+    "git",
+    "-C",
+    "/etc/nixos/nixpkgs",
+    "-c",
+    "safe.directory=.",
+    "rev-parse",
+    "--verify",
+    "nixos/nixos-unstable",
+]

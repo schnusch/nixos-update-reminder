@@ -1,0 +1,27 @@
+[project]
+name = "nixos-update-reminder"
+version = "0.1.0"
+description = "Query NixOS systems for the nixpkgs commit they were built with and display that age to the user."
+authors = [
+    { name = "schnusch", email = "schnusch@users.noreply.github.com" },
+]
+license = "Beerware"
+license-files = ["COPYING.md"]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "PyGObject",
+]
+
+[project.urls]
+homepage = "https://github.com/schnusch/nixos-update-reminder"
+
+[build-system]
+requires = [
+    "setuptools>=61",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+nixos-update-reminder = "nixos_update_reminder:main"

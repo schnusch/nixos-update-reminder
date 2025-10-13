@@ -1,0 +1,21 @@
+on:
+  pull_request:
+  push:
+jobs:
+  dprint-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dprint/check@v2.3
+    - run: dprint config update
+    - run: git diff-index --patch --color --exit-code HEAD
+
+  # https://stackoverflow.com/a/78156861
+  ruff-isort:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: astral-sh/ruff-action@v3
+      with:
+        args: check --select I --fix
+    - run: git diff-index --patch --color --exit-code HEAD

@@ -1,0 +1,10 @@
+on:
+  pull_request:
+  push:
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: pip3 install mypy
+    - run: mypy .
