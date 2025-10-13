@@ -1,0 +1,10 @@
+== nixos-update-reminder
+
+To use _nixos-update-reminder_ add the following to your NixOS configuration:
+
+[source,nix]
+include::example.nix[]
+
+=== NixOS Module Options
+
+include::options.adoc[leveloffset=+2]

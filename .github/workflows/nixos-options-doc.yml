@@ -12,9 +12,18 @@ jobs:
     - uses: cachix/install-nix-action@v31
       with:
         nix_path: nixpkgs=channel:nixos-unstable
-    - run: nix-build -o doc/module.adoc -A optionsAsciiDoc ./doc
-    - run: nix run nixpkgs#asciidoctor -- -o doc/module.html doc/module.adoc
-    - run: rm -f doc/default.nix
+    - name: Prepare asciidoc
+      run: |-
+        commit=$(git rev-parse --verify HEAD)
+        sha256=$(nix-prefetch-url --type sha256 --unpack "https://github.com/schnusch/nixos-update-reminder/archive/$commit.tar.gz")
+        sed -e "s,@@commit@@,$commit,g" -e "s,@@sha256@@,$sha256,g" -i doc/example.nix
+        nix-build \
+          -o doc/options.adoc \
+          doc/options.nix \
+          --argstr baseURL "https://github.com/schnusch/nixos-update-reminder/blob/$commit/" \
+          -A optionsAsciiDoc
+    - run: nix run nixpkgs#asciidoctor -- -o doc/index.html doc/index.adoc
+    - run: rm -f doc/options.nix
     - uses: actions/upload-pages-artifact@v3
       id: deployment
       with:
@@ -30,6 +39,5 @@ jobs:
     runs-on: ubuntu-latest
     needs: nixos-options-doc
     steps:
-    - name: Deploy to GitHub Pages
-      id: deployment
+    - id: deployment
       uses: actions/deploy-pages@v4
