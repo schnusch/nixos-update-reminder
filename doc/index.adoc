@@ -1,3 +1,5 @@
+:source-highlighter: pygments
+
 == nixos-update-reminder
 
 _nixos-update-reminder_ queries the nixpkgs revision from a host and displays
