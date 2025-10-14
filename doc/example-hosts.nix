@@ -1,4 +1,4 @@
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 {
   services.nixos-update-reminder = {
     hosts =
@@ -25,10 +25,13 @@
         ];
       in
       {
+        # nixos-version is only added to environment.systemPackages and is
+        # not available through pkgs, but we can imitate nixos-version.
         localhost.argv = [
-          "nixos-version"
-          "--revision"
+          "echo"
+          config.system.nixos.revision
         ];
+        # Query remote hosts over SSH.
         server.argv = ssh "server" [
           "nixos-version"
           "--revision"

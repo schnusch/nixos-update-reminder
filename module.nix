@@ -55,7 +55,7 @@ let
       };
       defaultText = literalExpression ''
         {
-          # nixos-version is only added to environment.systemPackages and
+          # nixos-version is only added to environment.systemPackages and is
           # not available through pkgs, but we can imitate nixos-version.
           localhost.argv = [ "echo" config.system.nixos.revision ];
         }
