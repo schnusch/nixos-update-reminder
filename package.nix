@@ -3,7 +3,7 @@
   buildPythonApplication,
   gobject-introspection,
   setuptools,
-  wrapGAppsHook,
+  wrapGAppsHook3,
   libnotify,
   pygobject3,
 }:
@@ -29,7 +29,7 @@ buildPythonApplication {
   format = "pyproject";
 
   nativeBuildInputs = [
-    wrapGAppsHook
+    wrapGAppsHook3
     gobject-introspection
   ];
 
