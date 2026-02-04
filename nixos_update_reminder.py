@@ -20,7 +20,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from itertools import starmap
 from pathlib import Path
-from typing import Optional, TypeVar, Union
+from typing import NamedTuple, Optional, TypeVar, Union
 
 import gi  # type: ignore[import-untyped]
 
@@ -259,14 +259,36 @@ async def get_nixos_revision(cmd: list[str]) -> str:
             raise subprocess.CalledProcessError(rc, cmd)
 
 
+class RevisionResult(NamedTuple):
+    revision_or_message: str
+    error: bool = False
+
+
 async def get_all_nixos_revisions(
     hosts: dict[str, HostConfig],
     timeout: Union[int, float],
-) -> dict[str, str]:
+) -> dict[str, RevisionResult]:
     results = {}
 
     async def run_and_store(host: str, conf: HostConfig) -> None:
-        results[host] = await get_nixos_revision(conf.argv)
+        try:
+            results[host] = RevisionResult(await get_nixos_revision(conf.argv))
+        except BaseException as e:
+            # get_nixos_revision will send SIGHUP if cancelled and wait for the
+            # process to exit. This will most likely raise a CalledProcessError.
+            if (
+                # only the case if asyncio.create_subprocess_exec is interrupted
+                isinstance(e, asyncio.exceptions.CancelledError)
+                # handling of asyncio.create_subprocess_exec probably caused
+                # another exception (likely a subprocess.CalledProcessError)
+                or isinstance(e.__context__, asyncio.exceptions.CancelledError)
+            ):
+                logger.error("querying host %s timed out", host)
+                await asyncio.sleep(5)
+                results[host] = RevisionResult("query timed out", error=True)
+            else:
+                logger.exception("cannot query host %s", host)
+                results[host] = RevisionResult("cannot query", error=True)
 
     try:
         await asyncio.wait_for(
@@ -274,12 +296,7 @@ async def get_all_nixos_revisions(
             timeout,
         )
     except TimeoutError:
-        logger.warning(
-            "%d of %d nixos-version timed out after %r seconds",
-            len(hosts) - len(results),
-            len(hosts),
-            timeout,
-        )
+        pass
 
     return results
 
@@ -353,9 +370,11 @@ async def async_main() -> None:
     )
     author_dates: dict[str, datetime.datetime] = {}
 
-    async def get_and_store(key: str, commit: str) -> None:
+    async def get_and_store(key: str, result: RevisionResult) -> None:
+        if result.error:
+            return
         author_date = await get_author_date(
-            commit,
+            result.revision_or_message,
             timeout=config.http_timeout.total_seconds(),
         )
         if author_date is not None:
@@ -371,10 +390,12 @@ async def async_main() -> None:
     for host in config.hosts:
         author_date = author_dates.get(host, None)
         if author_date is None:
+            res = revisions.get(host, RevisionResult("", error=False))
             message.append(
-                "%(host)s: unknown"
+                "%(host)s: %(message)s"
                 % {
                     "host": host,
+                    "message": res.revision_or_message if res.error else "unknown",
                 }
             )
         else:

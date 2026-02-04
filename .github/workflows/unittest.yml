@@ -1,0 +1,10 @@
+on:
+  pull_request:
+  push:
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+    - run: apt-get install libnotify
+    - uses: actions/checkout@v4
+    - run: python3 -m unittest discover -v
