@@ -20,7 +20,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from itertools import starmap
 from pathlib import Path
-from typing import NamedTuple, Optional, TypeVar, Union
+from typing import Any, Callable, NamedTuple, Optional, TypeVar, Union
 
 import gi  # type: ignore[import-untyped]
 
@@ -140,14 +140,16 @@ def get_cache_directory() -> Path:
     return cache_home / app_name
 
 
-def safe_join(a: Path, b) -> Path:
+def safe_join(a: Path, b: Union[str, os.PathLike[str]]) -> Path:
     c = (a / b).resolve()
-    assert c.is_relative_to(a)
+    assert c.is_relative_to(a), (
+        f"refusing to join paths {a!r} and {b!r}, because {c!r} is no longer below {a!r}"
+    )
     return c
 
 
-async def update_commit_info(commit: str, timeout: Union[int, float]):
-    def fetch_json(url: str) -> str:
+async def update_commit_info(commit: str, timeout: Union[int, float]) -> Any:
+    def fetch_json(url: str) -> Any:
         logger.debug("querying %s", url)
         with urllib.request.urlopen(
             urllib.request.Request(url, headers={"Accept": "application/json"})
@@ -193,7 +195,7 @@ async def update_commit_info(commit: str, timeout: Union[int, float]):
     return commit_info
 
 
-async def get_commit_info(commit: str, timeout: Union[int, float]):
+async def get_commit_info(commit: str, timeout: Union[int, float]) -> Any:
     commit_info_dir = get_cache_directory() / "commit-info"
     path = safe_join(commit_info_dir, commit)
     try:
@@ -209,9 +211,9 @@ async def get_author_date(
     commit: str,
     timeout: Union[int, float],
     *,
-    _get_commit_info=get_commit_info,
+    _get_commit_info: Callable[[str, Union[int, float]], Any] = get_commit_info,
 ) -> Optional[datetime.datetime]:
-    commit_info = await _get_commit_info(commit, timeout=timeout)
+    commit_info = await _get_commit_info(commit, timeout)
     if commit_info is None:
         # get_commit_info will only return None when it called update_commit_info
         return None
