@@ -13,6 +13,7 @@ let
   src = lib.sourceByRegex ./. [
     "COPYING\\.md"
     "pyproject\\.toml"
+    "tests"
     ".*\\.py"
   ];
 
