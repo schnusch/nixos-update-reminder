@@ -1,0 +1,43 @@
+on:
+  push: &push
+    paths:
+    - "**.py"
+  pull_request: *push
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: pip3 install mypy
+    - run: mypy --strict .
+
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: astral-sh/ruff-action@v3
+
+  # https://stackoverflow.com/a/78156861
+  isort:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: astral-sh/ruff-action@v3
+      with:
+        args: check --select I --fix
+    - run: git diff-index --patch --color --exit-code HEAD
+
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+    - run: sudo apt-get update
+    - run: sudo apt-get install -y libnotify-dev
+    - uses: actions/checkout@v4
+    - run: python3 -m unittest discover -v
+
+  vermin:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: pip3 install vermin
+    - run: vermin -vvv --target=3.11- .

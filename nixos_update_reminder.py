@@ -25,7 +25,7 @@ from typing import Any, Callable, NamedTuple, Optional, TypeVar, Union
 import gi  # type: ignore[import-untyped]
 
 gi.require_version("Notify", "0.7")
-from gi.repository import Notify  # type: ignore[import-untyped]
+from gi.repository import Notify  # type: ignore[import-untyped] # noqa: E402
 
 app_name = "nixos-update-reminder"
 
