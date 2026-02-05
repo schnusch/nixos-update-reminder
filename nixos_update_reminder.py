@@ -169,12 +169,18 @@ async def update_commit_info(commit: str, timeout: Union[int, float]) -> Any:
         logger.error("%s timed out after %r seconds", url, timeout)
         return None
     except urllib.error.HTTPError as e:
+        response: Any = e.fp.read(1024)
+        try:
+            response = response.decode("utf-8")
+            response = json.loads(response)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            pass
         logger.exception(
             "cannot fetch %s, %d %s: %r",
             e.url,
             e.code,
             e.reason,
-            json.loads(e.fp.read().decode("utf-8")),
+            response,
         )
         return None
 
