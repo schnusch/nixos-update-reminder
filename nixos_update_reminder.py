@@ -243,6 +243,29 @@ def get_last_notification_date() -> Optional[datetime.datetime]:
         return None
 
 
+async def increasingly_kill_process(p: asyncio.subprocess.Process) -> None:
+    logger.info("sending SIGHUP to process %d", p.pid)
+    p.send_signal(signal.SIGHUP)
+    for timeout, signum in [
+        # If the process is still running after 1 second send a SIGTERM.
+        (1, signal.SIGTERM),
+        # If it is still running after another 1 second send a SIGKILL.
+        (1, signal.SIGKILL),
+    ]:
+        try:
+            await asyncio.wait_for(
+                p.wait(),
+                timeout=timeout,
+            )
+        except TimeoutError:
+            # Process is still running.
+            logger.info("sending %s to process %d", signal.Signals(signum).name, p.pid)
+            p.send_signal(signum)
+        else:
+            # Process ended.
+            break
+
+
 async def get_nixos_revision(cmd: list[str]) -> str:
     logger.debug("$ %s", shlex.join(cmd))
     try:
@@ -256,15 +279,16 @@ async def get_nixos_revision(cmd: list[str]) -> str:
         raise
     try:
         # TODO read only 21 bytes
-        return (await p.communicate())[0].strip().decode("ascii")
+        stdout, _ = await p.communicate()
     except BaseException:
-        logger.exception("sending SIGHUP to %s", shlex.join(cmd))
-        p.send_signal(signal.SIGHUP)
+        logger.exception("error reading from process %d: %s", p.pid, shlex.join(cmd))
+        await increasingly_kill_process(p)
         raise
     finally:
         rc = await p.wait()
         if rc != 0:
             raise subprocess.CalledProcessError(rc, cmd)
+    return stdout.strip().decode("ascii")
 
 
 class RevisionResult(NamedTuple):
