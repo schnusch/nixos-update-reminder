@@ -76,7 +76,6 @@ class Config:
                 raw_value = raw[opt]
             except KeyError:
                 continue
-            logger.debug("%r", raw_value)
             if isinstance(raw_value, (int, float)):
                 if raw_value < 0:
                     raise ValueError(
@@ -92,7 +91,6 @@ class Config:
             elif isinstance(raw_value, str):
                 kwargs = {"w": 0, "d": 0, "m": 0, "s": 0}
                 for m in re.finditer(pattern, raw_value):
-                    logger.debug(f"{raw_value!r} -> {m!r} {m.groups()!r}")
                     if m["error"] is not None:
                         example = " ".join(f"${{NUMBER}}{u}" for u in units)
                         raise ValueError(
@@ -267,7 +265,7 @@ async def increasingly_kill_process(p: asyncio.subprocess.Process) -> None:
 
 
 async def get_nixos_revision(cmd: list[str]) -> str:
-    logger.debug("$ %s", shlex.join(cmd))
+    logger.debug("starting process: %s", shlex.join(cmd))
     try:
         p = await asyncio.create_subprocess_exec(
             *cmd,
@@ -275,9 +273,10 @@ async def get_nixos_revision(cmd: list[str]) -> str:
             stdout=asyncio.subprocess.PIPE,
         )
     except BaseException:  # asyncio.CancelledError is a subclass of BaseException
-        logger.critical("cannot start %s", shlex.join(cmd))
+        logger.exception("cannot start process: %s", shlex.join(cmd))
         raise
     try:
+        logger.debug("started process %d: %s", p.pid, shlex.join(cmd))
         # TODO read only 21 bytes
         stdout, _ = await p.communicate()
     except BaseException:
@@ -380,9 +379,17 @@ async def async_main() -> None:
         action="store_true",
         help="Display a notification even if one was displayed recently.",
     )
+    p.add_argument(
+        "-v",
+        "--verbose",
+        action="store_const",
+        default=logging.INFO,
+        const=logging.DEBUG,
+        help="Enable debug logging.",
+    )
     args = p.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG, stream=sys.stderr)
+    logging.basicConfig(level=args.verbose, stream=sys.stderr)
     config = Config.load(args.config)
     logger.debug("loaded config:\n%s", pprint.pformat(config))
 
@@ -393,7 +400,7 @@ async def async_main() -> None:
             last_notification is not None
             and now - last_notification < config.notification_interval
         ):
-            logger.debug("last notification was only %r ago", now - last_notification)
+            logger.info("last notification was only %r ago", now - last_notification)
             return
 
     revisions = await get_all_nixos_revisions(
